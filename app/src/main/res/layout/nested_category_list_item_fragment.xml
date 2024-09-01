@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_height="@dimen/data_item_row_height"
+    android:padding="@dimen/data_item_row_padding"
+    android:layout_width="match_parent">
+
+    <com.money.manager.ex.nestedcategory.multilevellistview.LevelBeamView
+        android:id="@+id/dataItemLevelBeam"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/data_item_row_height" />
+
+    <ImageView
+        android:id="@+id/dataItemArrow"
+        android:layout_width="22dp"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_toEndOf="@id/dataItemLevelBeam"
+        android:src="@drawable/arrow_down" />
+
+    <LinearLayout
+        android:id="@+id/dataItemRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_marginLeft="@dimen/offset_default"
+        android:layout_marginRight="@dimen/offset_default"
+        android:layout_toStartOf="@id/dataItemAction"
+        android:layout_toEndOf="@id/dataItemArrow"
+        android:gravity="left|center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/dataItemName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:textColor="@android:color/black"
+            android:text="Example Category"
+            android:textSize="@dimen/font_default" />
+
+        <TextView
+            android:id="@+id/dataItemInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:text="some detail info on category"
+            android:textColor="@android:color/black"
+            android:textSize="@dimen/font_small" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/dataItemAction"
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_alignParentEnd="true"
+        android:gravity="left|center_vertical"
+        >
+
+        <TextView
+            android:id="@+id/dataItemValue"
+            android:layout_width="wrap_content"
+            android:layout_height="45dp"
+            android:gravity="right|center_vertical"
+            android:singleLine="true"
+            android:text="€ 12.345.67,00"
+            android:textSize="@dimen/font_default"
+            android:visibility="visible" />
+        <!--            android:layout_alignEnd="@id/dataItemSelect"  -->
+        <!--            android:layout_toStartOf="@id/dataItemSelect"  -->
+
+        <ImageView
+            android:id="@+id/dataItemSelect"
+            android:layout_width="25dp"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:src="@drawable/arrow_left"
+            android:visibility="visible" />
+
+    </LinearLayout>
+
+</RelativeLayout>
