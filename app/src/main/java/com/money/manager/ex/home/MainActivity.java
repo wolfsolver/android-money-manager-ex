@@ -84,7 +84,7 @@ import com.money.manager.ex.home.events.RequestWatchlistFragmentEvent;
 import com.money.manager.ex.home.events.UsernameLoadedEvent;
 import com.money.manager.ex.investment.PortfolioFragment;
 import com.money.manager.ex.investment.watchlist.WatchlistFragment;
-import com.money.manager.ex.notifications.RecurringTransactionNotifications;
+import com.money.manager.ex.notifications.RecurringTransactionProcess;
 import com.money.manager.ex.recurring.transactions.RecurringTransactionListFragment;
 import com.money.manager.ex.reports.CategoriesReportActivity;
 import com.money.manager.ex.reports.IncomeVsExpensesActivity;
@@ -1164,10 +1164,7 @@ public class MainActivity
 
     private void initializeSync() {
         SyncManager sync = new SyncManager(this);
-        if (!sync.isActive()) return;
-
         SyncPreferences preferences = new SyncPreferences(this);
-
         // Start the sync timer in case it was stopped for whatever reason.
         if (preferences.getSyncInterval() != 0) {
             sync.startSyncServiceHeartbeat();
@@ -1185,13 +1182,13 @@ public class MainActivity
 
     private void populateScheduledTransactions() {
         // start notification & execution for scheduled transaction
-        boolean showNotification = false;
+        boolean processRecurringTransaction = false;
         if (!isScheduledTransactionStarted) {
             AppSettings settings = new AppSettings(this);
-            showNotification = settings.getBehaviourSettings().getNotificationRecurringTransaction();
-            if (showNotification) {
-                RecurringTransactionNotifications notifications = new RecurringTransactionNotifications(this);
-                notifications.notifyRepeatingTransaction();
+            processRecurringTransaction = settings.getBehaviourSettings().getProcessRecurringTransaction();
+            if (processRecurringTransaction) {
+                RecurringTransactionProcess notifications = new RecurringTransactionProcess(this);
+                notifications.processRepeatingTransaction();
                 isScheduledTransactionStarted = true;
             }
         }

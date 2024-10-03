@@ -19,11 +19,11 @@ package com.money.manager.ex.sync;
 
 import static android.content.Context.MODE_PRIVATE;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.TextUtils;
 
 import androidx.preference.ListPreference;
-import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 
@@ -31,12 +31,17 @@ import com.money.manager.ex.MmexApplication;
 import com.money.manager.ex.R;
 import com.money.manager.ex.core.Core;
 import com.money.manager.ex.core.UIHelper;
+import com.money.manager.ex.core.docstorage.FileStorageHelper;
+import com.money.manager.ex.home.DatabaseMetadata;
 import com.money.manager.ex.home.RecentDatabasesProvider;
 import com.money.manager.ex.settings.PreferenceConstants;
 import com.money.manager.ex.sync.events.DbFileDownloadedEvent;
+import com.money.manager.ex.utils.MmxDate;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
+
+import java.util.Date;
 
 import javax.inject.Inject;
 
@@ -55,7 +60,6 @@ public class SyncPreferenceFragment
 
     @Inject Lazy<RecentDatabasesProvider> mDatabases;
 
-    private SyncPreferencesViewHolder viewHolder;
     private SyncManager mSyncManager;
 
     @Override
@@ -115,92 +119,79 @@ public class SyncPreferenceFragment
     }
 
     private void initializePreferences() {
-        viewHolder = new SyncPreferencesViewHolder(this);
-
-        // enable/disable sync.
-        viewHolder.syncEnabled.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-            @Override
-            public boolean onPreferenceChange(Preference preference, Object o) {
-                // switch the sync heartbeat
-                Boolean enabled = (Boolean) o;
-                getSyncManager().setEnabled(enabled);
-                if (enabled) {
-                    getSyncManager().startSyncServiceHeartbeat();
-                } else {
-                    getSyncManager().stopSyncServiceAlarm();
-                }
-                return true;
-            }
-        });
+        SyncPreferencesViewHolder viewHolder = new SyncPreferencesViewHolder(this);
 
         viewHolder.syncInterval.setSummary(viewHolder.syncInterval.getEntries()[viewHolder.syncInterval.findIndexOfValue(viewHolder.syncInterval.getValue())]);
-        viewHolder.syncInterval.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-            @Override
-            public boolean onPreferenceChange(Preference preference, Object o) {
-                // reset timer.
-                SyncManager sync = getSyncManager();
-                int interval = Integer.parseInt(o.toString());
-                sync.setSyncInterval(interval);
-                Timber.d("sync interval set to %d", interval);
+        viewHolder.syncInterval.setOnPreferenceChangeListener((preference, o) -> {
+            // reset timer.
+            SyncManager sync = getSyncManager();
+            int interval = Integer.parseInt(o.toString());
+            sync.setSyncInterval(interval);
+            Timber.d("sync interval set to %d", interval);
 
-                ListPreference listPreference = (ListPreference) preference;
-                int prefIndex = listPreference.findIndexOfValue(o.toString());
-                preference.setSummary(listPreference.getEntries()[prefIndex]);
+            ListPreference listPreference = (ListPreference) preference;
+            int prefIndex = listPreference.findIndexOfValue(o.toString());
+            preference.setSummary(listPreference.getEntries()[prefIndex]);
 
-                sync.stopSyncServiceAlarm();
-                if (interval > 0) {
-                    // don't start sync service if the interval is set to 0.
-                    sync.startSyncServiceHeartbeat();
-                }
-                return true;
+            sync.stopSyncServiceAlarm();
+            if (interval > 0) {
+                // don't start sync service if the interval is set to 0.
+                sync.startSyncServiceHeartbeat();
             }
+            return true;
         });
 
         // Download.
 
-        viewHolder.download.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-            @Override
-            public boolean onPreferenceClick(Preference preference) {
-                forceDownload();
-                return true;
-            }
+        viewHolder.download.setOnPreferenceClickListener(preference -> {
+            DatabaseMetadata currentDb = getDatabases().getCurrent();
+            FileStorageHelper storage = new FileStorageHelper(getContext());
+
+            Date localSnapshot = MmxDate.fromIso8601(currentDb.localSnapshotTimestamp).toDate();
+            Date localModified = storage.getLocalFileModifiedDate(currentDb).toDate();
+
+            Date remoteSnapshot = MmxDate.fromIso8601(currentDb.remoteLastChangedDate).toDate();
+            Date remoteModified = storage.getRemoteFileModifiedDate(currentDb).toDate();
+
+            boolean isLocalModified = storage.isLocalFileChanged(currentDb);
+            boolean isRemoteModified = storage.isRemoteFileChanged(currentDb);
+
+            String message = String.format(
+                    "Local file changes indicator: %s.\n" +
+                            "Downloading will overwrite your local version.\nDo you want to continue?"
+                    , isLocalModified);
+
+            showConfirmDialog("Download Warning", message, this::forceDownload);
+            return false;
         });
 
         // Upload.
 
-        viewHolder.upload.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-            @Override
-            public boolean onPreferenceClick(Preference preference) {
-                forceUpload();
-                return false;
-            }
+        viewHolder.upload.setOnPreferenceClickListener(preference -> {
+            DatabaseMetadata currentDb = getDatabases().getCurrent();
+            FileStorageHelper storage = new FileStorageHelper(getContext());
+
+            Date localSnapshot = MmxDate.fromIso8601(currentDb.localSnapshotTimestamp).toDate();
+            Date localModified = storage.getLocalFileModifiedDate(currentDb).toDate();
+
+            Date remoteSnapshot = MmxDate.fromIso8601(currentDb.remoteLastChangedDate).toDate();
+            Date remoteModified = storage.getRemoteFileModifiedDate(currentDb).toDate();
+
+            boolean isLocalModified = storage.isLocalFileChanged(currentDb);
+            boolean isRemoteModified = storage.isRemoteFileChanged(currentDb);
+
+            String message = String.format(
+                    "Remote file changes indicator: %s.\n" +
+                            "Uploading will overwrite your remote version.\nDo you want to continue?"
+                    , isRemoteModified);
+            showConfirmDialog("Upload Warning",message,this::forceUpload);
+            return false;
         });
 
         // reset preferences
-        viewHolder.resetPreferences.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-            @Override
-            public boolean onPreferenceClick(Preference preference) {
-                final SyncManager sync = getSyncManager();
-//                sync.logout()
-//                    .subscribeOn(Schedulers.io())
-//                    .observeOn(AndroidSchedulers.mainThread())
-//                    .subscribe(new SingleSubscriber<Void>() {
-//                        @Override
-//                        public void onSuccess(Void value) {
-//                            sync.resetPreferences();
-//                            sync.stopSyncServiceAlarm();
-//
-//                            new Core(getActivity()).alert(R.string.preferences_reset);
-//
-//                            getActivity().recreate();
-//                        }
-//
-//                        @Override
-//                        public void onError(Throwable error) {
-//                            Timber.e(error, "logging out the cloud provider");                        }
-//                    });
-                return false;
-            }
+        viewHolder.resetPreferences.setOnPreferenceClickListener(preference -> {
+            // TODO
+            return false;
         });
     }
 
@@ -221,5 +212,14 @@ public class SyncPreferenceFragment
         } catch (RuntimeException e) {
             Timber.e(e, "uploading database");
         }
+    }
+
+    private void showConfirmDialog(String title, String message, Runnable onConfirm) {
+        new AlertDialog.Builder(getActivity())
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("Continue", (dialog, which) -> onConfirm.run())
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                .show();
     }
 }

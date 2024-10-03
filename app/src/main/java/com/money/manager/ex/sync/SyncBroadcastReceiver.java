@@ -20,9 +20,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-import com.money.manager.ex.core.database.DatabaseManager;
-import com.money.manager.ex.settings.SyncPreferences;
-
 import timber.log.Timber;
 
 /**
@@ -34,13 +31,10 @@ public class SyncBroadcastReceiver
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Timber.d("receiving a sync intent");
+        Timber.d("receiving a sync intent %s",intent);
 
         SyncManager sync = new SyncManager(context);
         if (!sync.canSync()) return;
-
-        // check sync interval.
-        if (new SyncPreferences(context).getSyncInterval() == 0) return;
 
         sync.triggerSynchronization();
     }

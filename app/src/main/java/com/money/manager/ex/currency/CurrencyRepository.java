@@ -48,6 +48,7 @@ public class CurrencyRepository
             Currency.PFX_SYMBOL, Currency.SFX_SYMBOL, Currency.DECIMAL_POINT,
             Currency.GROUP_SEPARATOR, Currency.UNIT_NAME, Currency.CENT_NAME,
             Currency.SCALE, Currency.BASECONVRATE, Currency.CURRENCY_SYMBOL
+                , Currency.CURRENCY_TYPE
         };
     }
 
@@ -96,12 +97,10 @@ public class CurrencyRepository
         ContentValues contentValues = new ContentValues();
         contentValues.put(Currency.BASECONVRATE, exchangeRate.toString());
 
-        int result = getContext().getContentResolver().update(this.getUri(),
+        return getContext().getContentResolver().update(this.getUri(),
             contentValues,
             Currency.CURRENCYID + "=?",
             new String[] { Integer.toString(currencyId) });
-
-        return result;
     }
 
     // private methods

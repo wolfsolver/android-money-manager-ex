@@ -27,15 +27,15 @@ android {
 
     defaultConfig {
         applicationId "com.money.manager.ex"
-        versionCode 1038
+        versionCode 1041
         //versionName getVersionAsDate() + "." + versionCode
-        versionName "2024.08.25"
+        versionName "2024.09.21"
         // $applicationId
         setProperty("archivesBaseName", "ammx-$versionName")
 
         // minSdkVersion rootProject.ext.minSdkVersion
         // targetSdkVersion rootProject.ext.targetSdkVersion
-        minSdkVersion 22 // Android 5.1
+        minSdkVersion 26 // Android 8.0
         targetSdk rootProject.ext.targetSdk
 
         multiDexEnabled true
@@ -166,8 +166,9 @@ dependencies {
             , 'com.mikepenz:fontawesome-typeface:5.3.1.1@aar'
             , 'com.roomorama:caldroid:3.0.1'
             , 'androidx.work:work-runtime:2.8.1'
-            , 'com.github.luizgrp:sectionedrecyclerviewadapter:3.2.0' // TODO: Library is archived. Find alternative.
             , 'androidx.fragment:fragment:1.5.6'
+            , 'androidx.biometric:biometric:1.1.0' // or the latest version
+            , 'androidx.documentfile:documentfile:1.0.1'
             , 'com.caverock:androidsvg-aar:1.4'
 
     )

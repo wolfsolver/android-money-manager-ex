@@ -116,22 +116,22 @@ public class FileStorageHelper {
      */
 
     public boolean isLocalFileChanged(DatabaseMetadata metadata) {
-        MmxDate localLastModifiedMmxDate = getLocalFileModifiedDate(metadata);
-        Date localModified = localLastModifiedMmxDate.toDate();
+        Date localModified = getLocalFileModifiedDate(metadata).toDate();
         // The timestamp when the local file was downloaded.
         Date localSnapshot = MmxDate.fromIso8601(metadata.localSnapshotTimestamp).toDate();
+
+        Timber.d("Local  file mtime: %s, snapshot time: %s", localModified.toString(), localSnapshot.toString());
 
         return localModified.after(localSnapshot);
     }
 
     public boolean isRemoteFileChanged(DatabaseMetadata metadata) {
-        DocFileMetadata remote = getRemoteMetadata(metadata);
-
+        Date remoteModified = getRemoteFileModifiedDate(metadata).toDate();
         // Check if the remote file was modified since fetched.
         // This is the modification timestamp of the remote file when it was last downloaded.
         Date remoteSnapshot = MmxDate.fromIso8601(metadata.remoteLastChangedDate).toDate();
-        // This is current dateModified at the remote file.
-        Date remoteModified = remote.lastModified.toDate();
+
+        Timber.d("Remote file mtime: %s, snapshot time: %s", remoteModified.toString(), remoteSnapshot.toString());
 
         return remoteModified.after(remoteSnapshot);
     }
@@ -295,25 +295,17 @@ public class FileStorageHelper {
         ContentResolver resolver = getContext().getContentResolver();
         Uri remote = Uri.parse(metadata.remotePath);
 
-        ParcelFileDescriptor pfd = null;
-        try {
-            pfd = resolver.openFileDescriptor(remote, "w");
+        try (ParcelFileDescriptor pfd = resolver.openFileDescriptor(remote, "w");
+             FileOutputStream fileOutputStream = new FileOutputStream(pfd.getFileDescriptor())) {
 
-            FileOutputStream fileOutputStream =
-                new FileOutputStream(pfd.getFileDescriptor());
-
-            // local file
             File localFile = new File(metadata.localPath);
             Files.copy(localFile, fileOutputStream);
 
-            fileOutputStream.close();
-            pfd.close();
-
-            Timber.i("Database stored successfully.");
+            Timber.d("Database stored successfully.");
         } catch (FileNotFoundException e) {
-            Timber.e(e);
+            Timber.e(e, "File not found during upload");
         } catch (IOException e) {
-            Timber.e(e);
+            Timber.e(e, "IO error during upload");
         }
     }
 
@@ -392,11 +384,17 @@ public class FileStorageHelper {
      * Reads the date/time when the local database file was last changed.
      * @return The date/time of the last change
      */
-    private MmxDate getLocalFileModifiedDate(DatabaseMetadata metadata) {
+    public MmxDate getLocalFileModifiedDate(DatabaseMetadata metadata) {
         File localFile = new File(metadata.localPath);
         long localFileTimestamp = localFile.lastModified();
         MmxDate localSnapshot = new MmxDate(localFileTimestamp);
         return localSnapshot;
+    }
+
+    public MmxDate getRemoteFileModifiedDate(DatabaseMetadata metadata) {
+        DocFileMetadata remote = getRemoteMetadata(metadata);
+        // This is current dateModified at the remote file.
+        return remote.lastModified;
     }
 
     private void pollNewRemoteTimestamp(DatabaseMetadata metadata) {
@@ -421,8 +419,7 @@ public class FileStorageHelper {
                     // got an update. store the latest metadata.
                     metadata.remoteLastChangedDate = remote.lastModified.toIsoString();
                     saveMetadata(metadata);
-                    Timber.i("The remote file updated at " +
-                            remote.lastModified.toIsoString());
+                    Timber.d("The remote file updated at %s", remote.lastModified.toIsoString());
                     // do not poll further.
                 }
             }
