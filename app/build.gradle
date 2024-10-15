@@ -26,7 +26,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.money.manager.ex"
+        applicationId "com.money.manager.ex.android"
         versionCode 1041
         //versionName getVersionAsDate() + "." + versionCode
         versionName "2024.09.21"
@@ -126,6 +126,11 @@ android {
         // http://robolectric.org/getting-started/
         unitTests {
             includeAndroidResources = true
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
         }
     }
 }
