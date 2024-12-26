@@ -15,7 +15,6 @@ public class Taglink extends EntityBase  {
         , UNIQUE(REFTYPE, REFID, TAGID)
         )
      */
-    public static final String REFTYPE_TRANSACTION = "Transaction";
     public static final String TAGLINKID = "TAGLINKID";
     public static final String REFTYPE = "REFTYPE";
     public static final String REFID = "REFID";

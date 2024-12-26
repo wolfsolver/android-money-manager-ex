@@ -17,7 +17,9 @@
 
 package com.money.manager.ex.transactions;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.text.Editable;
 // not used
 // import android.text.TextUtils;
@@ -25,15 +27,22 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import com.money.manager.ex.R;
 import com.money.manager.ex.core.FormatUtilities;
 import com.money.manager.ex.core.TransactionTypes;
 import com.money.manager.ex.database.ISplitTransaction;
+import com.money.manager.ex.datalayer.TagRepository;
+import com.money.manager.ex.datalayer.TaglinkRepository;
+import com.money.manager.ex.domainmodel.Tag;
+import com.money.manager.ex.domainmodel.Taglink;
 import com.money.manager.ex.servicelayer.CategoryService;
+import com.money.manager.ex.servicelayer.TagService;
 import com.money.manager.ex.transactions.events.AmountEntryRequestedEvent;
 import com.money.manager.ex.transactions.events.CategoryRequestedEvent;
 import com.money.manager.ex.transactions.events.SplitItemRemovedEvent;
+import com.money.manager.ex.transactions.events.TagRequestedEvent;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -79,6 +88,7 @@ public class SplitCategoriesAdapter
         initCategorySelector(viewHolder);
         initNotesControls(viewHolder);
         initTransactionTypeButton(viewHolder);
+        initTagSelector(viewHolder);
 
         return viewHolder;
     }
@@ -94,6 +104,7 @@ public class SplitCategoriesAdapter
         bindTransactionTypeButton(split, holder);
         bindAmount(split, holder);
         bindNotes(split, holder);
+        bindTag(getContext(), holder, split);
     }
 
     @Override
@@ -122,6 +133,13 @@ public class SplitCategoriesAdapter
         CategoryService service = new CategoryService(context);
 
         String buttonText = service.getCategorySubcategoryName(split.getCategoryId());
+        holder.txtSelectCategory.setText(buttonText);
+    }
+
+    private void bindTag(Context context, SplitItemViewHolder holder, ISplitTransaction split) {
+        TaglinkRepository service = new TaglinkRepository(context);
+
+        String buttonText = service.loadTagsfor(split.getId(),split.getTransactionModel());
         holder.txtSelectCategory.setText(buttonText);
     }
 
@@ -178,6 +196,18 @@ public class SplitCategoriesAdapter
             }
         });
     }
+
+    private void initTagSelector(final SplitItemViewHolder holder) {
+        holder.txtTags.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                // request category selection
+                EventBus.getDefault().post(new TagRequestedEvent(holder.getAdapterPosition(), holder.txtTags));
+            }
+        });
+    }
+
 
     private void initTransactionTypeButton(final SplitItemViewHolder viewHolder) {
         viewHolder.transactionTypeButton.setOnClickListener(new View.OnClickListener() {

@@ -1698,7 +1698,7 @@ public class EditTransactionCommonFunctions {
         if (mTaglinks != null) {
             taglinkRepository.saveAllFor(transactionEntity.getTransactionModel(), transactionEntity.getId(), mTaglinks);
         } else {
-            taglinkRepository.deleteForTransaction(transactionEntity.getId());
+            taglinkRepository.deleteForType(transactionEntity.getId(), transactionEntity.getTransactionModel());
         }
 
     }

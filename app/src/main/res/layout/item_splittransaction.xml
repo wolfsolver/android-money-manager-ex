@@ -114,19 +114,6 @@
                     android:layout_marginStart="5dp"
                     android:layout_marginEnd="5dp" />
 
-                <!--<com.money.manager.ex.view.RobotoTextView-->
-                <!--android:id="@+id/editTextNotesSplit"-->
-                <!--style="?attr/holoSpinnerStyle"-->
-                <!--android:layout_width="0dp"-->
-                <!--android:layout_height="wrap_content"-->
-                <!--android:layout_weight="1"-->
-                <!--android:focusable="false"-->
-                <!--android:focusableInTouchMode="false"-->
-                <!--android:gravity="end"-->
-                <!--android:hint="@string/notes"-->
-                <!--android:textStyle="bold"-->
-                <!--android:visibility="visible" />-->
-
                 <com.money.manager.ex.view.RobotoEditText
                     android:id="@+id/notesEditSplit"
                     android:layout_width="0dp"
@@ -138,6 +125,33 @@
                     android:scrollHorizontally="false"
                     android:textCursorDrawable="@null" />
             </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <!-- textViewTags -->
+                <com.money.manager.ex.view.RobotoTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical|end"
+                    android:layout_marginLeft="5dp"
+                    android:layout_marginRight="5dp"
+                    android:text="@string/tag"
+                    android:layout_marginEnd="5dp"
+                    android:layout_marginStart="5dp" />
+
+                <com.money.manager.ex.view.RobotoTextView
+                    android:id="@+id/textViewTags"
+                    style="?attr/holoSpinnerStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:focusable="false"
+                    android:focusableInTouchMode="false"
+                    android:hint="@string/select_tag"
+                    android:singleLine="true" />
+            </TableRow>
+
         </TableLayout>
 
     </LinearLayout>
