@@ -65,7 +65,7 @@ public class SearchParameters {
     // TODO Remove CategorySub and replace with Category
     //  and with a flag for search in subcategory.
     //  flag must be driven also by the UI
-    public CategorySub category;
+    public CategoryForSearch category;
     public boolean searchSubCategory = false;
 
     public String transactionNumber;

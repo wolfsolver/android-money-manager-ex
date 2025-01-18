@@ -57,7 +57,6 @@ import com.money.manager.ex.database.QueryAllData;
 import com.money.manager.ex.database.WhereStatementGenerator;
 import com.money.manager.ex.domainmodel.Account;
 import com.money.manager.ex.domainmodel.Currency;
-import com.money.manager.ex.domainmodel.SplitCategory;
 import com.money.manager.ex.servicelayer.AccountService;
 import com.money.manager.ex.settings.AppSettings;
 import com.money.manager.ex.settings.LookAndFeelSettings;
@@ -264,13 +263,11 @@ public class SearchParametersFragment
                 break;
             case RequestCodes.CATEGORY:
                 //create class for store data
-                CategorySub categorySub = new CategorySub();
-                categorySub.categId = data.getLongExtra(CategoryListActivity.INTENT_RESULT_CATEGID, Constants.NOT_SET);
-                categorySub.categName = data.getStringExtra(CategoryListActivity.INTENT_RESULT_CATEGNAME);
-                categorySub.subCategId = data.getLongExtra(CategoryListActivity.INTENT_RESULT_SUBCATEGID, Constants.NOT_SET);
-                categorySub.subCategName = data.getStringExtra(CategoryListActivity.INTENT_RESULT_SUBCATEGNAME);
+                CategoryForSearch categoryForSearch = new CategoryForSearch();
+                categoryForSearch.categId = data.getLongExtra(CategoryListActivity.INTENT_RESULT_CATEGID, Constants.NOT_SET);
+                categoryForSearch.categName = data.getStringExtra(CategoryListActivity.INTENT_RESULT_CATEGNAME);
                 //update into button
-                displayCategory(categorySub);
+                displayCategory(categoryForSearch);
                 break;
 
             case RequestCodes.AMOUNT_FROM:
@@ -490,12 +487,7 @@ public class SearchParametersFragment
 
         if (searchParameters.category != null) {
             // Issue 1532 need to check subcategory first
-            long categId;
-            if  ( searchParameters.category.subCategId > 0 ) {
-                categId = searchParameters.category.subCategId;
-            } else {
-                categId = searchParameters.category.categId;
-            }
+            long categId = searchParameters.category.categId;
             // Category. Also check the splits.
 
             // todo add search in sub category if flag is on
@@ -654,7 +646,7 @@ public class SearchParametersFragment
         }
         // Category
         if (txtSelectCategory.getTag() != null) {
-            searchParameters.category = (CategorySub) txtSelectCategory.getTag();
+            searchParameters.category = (CategoryForSearch) txtSelectCategory.getTag();
             searchParameters.searchSubCategory = cbxSearchSubCategory.isChecked();
         }
         // Transaction number
@@ -681,14 +673,13 @@ public class SearchParametersFragment
         viewHolder.txtAmountTo.setText(displayAmount);
     }
 
-    private void displayCategory(CategorySub categorySub) {
-        if (categorySub == null) {
+    private void displayCategory(CategoryForSearch categoryForSearch) {
+        if (categoryForSearch == null) {
             txtSelectCategory.setText("");
             txtSelectCategory.setTag(null);
         } else {
-            txtSelectCategory.setText(categorySub.categName +
-                    (!TextUtils.isEmpty(categorySub.subCategName) ? " : " + categorySub.subCategName : ""));
-            txtSelectCategory.setTag(categorySub);
+            txtSelectCategory.setText(categoryForSearch.categName);
+            txtSelectCategory.setTag(categoryForSearch);
         }
     }
 

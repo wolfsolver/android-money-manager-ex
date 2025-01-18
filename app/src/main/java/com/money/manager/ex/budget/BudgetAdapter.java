@@ -45,7 +45,6 @@ import com.money.manager.ex.settings.AppSettings;
 import com.money.manager.ex.utils.MmxDate;
 import com.squareup.sqlbrite3.BriteDatabase;
 
-import java.util.Date;
 import java.util.HashMap;
 
 import javax.inject.Inject;
@@ -105,6 +104,7 @@ public class BudgetAdapter
         try {
             useBudgetFinancialYear = (new AppSettings(getContext()).getBudgetSettings().getBudgetFinancialYear());
         } catch (Exception e) {
+            useBudgetFinancialYear = false;
         }
 
     }
@@ -280,11 +280,6 @@ public class BudgetAdapter
         return total;
     }
 
-    private double getAmountForSubCategory(long subCategoryId) {
-        double total = loadTotalFor(QueryMobileData.SubcategID + "=" + subCategoryId);
-        return total;
-    }
-
     private double loadTotalFor(String where) {
         double total = 0;
 
@@ -327,8 +322,7 @@ public class BudgetAdapter
 
         //data to compose builder
         String[] projectionIn = new String[]{
-                "ID AS _id", QueryMobileData.CATEGID, QueryMobileData.Category,
-                QueryMobileData.SubcategID, QueryMobileData.Subcategory,
+                "ID AS _id", QueryMobileData.CATEGID, QueryMobileData.CategoryFullName,
                 "SUM(" + QueryMobileData.AmountBaseConvRate + ") AS TOTAL"
         };
 
@@ -338,8 +332,7 @@ public class BudgetAdapter
             selection += " AND " + whereClause;
         }
 
-        String groupBy = QueryMobileData.CATEGID + ", " + QueryMobileData.Category + ", " +
-                QueryMobileData.SubcategID + ", " + QueryMobileData.Subcategory;
+        String groupBy = QueryMobileData.CATEGID + ", " + QueryMobileData.CategoryFullName;
 
         String having = null;
 //        if (!TextUtils.isEmpty(((CategoriesReportActivity) context).mFilter)) {
@@ -351,7 +344,7 @@ public class BudgetAdapter
 //            }
 //        }
 
-        String sortOrder = QueryMobileData.Category + ", " + QueryMobileData.Subcategory;
+        String sortOrder = QueryMobileData.CategoryFullName;
         String limit = null;
 
         builder.setTables(mobileData.getSource());

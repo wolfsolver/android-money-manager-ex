@@ -23,33 +23,29 @@ import android.os.Parcelable;
  * Used for search criteria.
  * Created by Alen on 13/07/2015.
  */
-public class CategorySub implements Parcelable {
+public class CategoryForSearch implements Parcelable {
 
-    public CategorySub() {
+    public CategoryForSearch() {
         // default constructor
     }
 
     public long categId;
     public String categName;
-    public long subCategId;
-    public String subCategName;
 
-    protected CategorySub(Parcel in) {
+    protected CategoryForSearch(Parcel in) {
         categId = in.readLong();
         categName = in.readString();
-        subCategId = in.readLong();
-        subCategName = in.readString();
     }
 
-    public static final Creator<CategorySub> CREATOR = new Creator<CategorySub>() {
+    public static final Creator<CategoryForSearch> CREATOR = new Creator<CategoryForSearch>() {
         @Override
-        public CategorySub createFromParcel(Parcel in) {
-            return new CategorySub(in);
+        public CategoryForSearch createFromParcel(Parcel in) {
+            return new CategoryForSearch(in);
         }
 
         @Override
-        public CategorySub[] newArray(int size) {
-            return new CategorySub[size];
+        public CategoryForSearch[] newArray(int size) {
+            return new CategoryForSearch[size];
         }
     };
 
@@ -62,8 +58,5 @@ public class CategorySub implements Parcelable {
     public void writeToParcel(Parcel parcel, int i) {
         parcel.writeLong(categId);
         parcel.writeString(categName);
-
-        parcel.writeLong(subCategId);
-        parcel.writeString(subCategName);
     }
 }

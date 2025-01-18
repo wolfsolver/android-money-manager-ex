@@ -56,7 +56,7 @@ import com.money.manager.ex.database.SQLTypeTransaction;
 import com.money.manager.ex.datalayer.CategoryRepository;
 import com.money.manager.ex.datalayer.Select;
 import com.money.manager.ex.domainmodel.Category;
-import com.money.manager.ex.search.CategorySub;
+import com.money.manager.ex.search.CategoryForSearch;
 import com.money.manager.ex.search.SearchActivity;
 import com.money.manager.ex.search.SearchParameters;
 import com.money.manager.ex.servicelayer.CategoryService;
@@ -76,10 +76,9 @@ public class NestedCategoryListFragment
 
     private static final int ID_LOADER_CATEGORYSUB = 0;
 
-    private static final String KEY_ID_GROUP = "CategorySubCategory:idGroup";
     private static final String KEY_CUR_FILTER = "CategorySubCategory:curFilter";
     // table or query
-    private static QueryNestedCategory mQuery;
+    private QueryNestedCategory mQuery;
     private int mLayout;
 //    private long mIdGroupChecked = ExpandableListView.INVALID_POSITION;
 
@@ -136,9 +135,6 @@ public class NestedCategoryListFragment
     }
 
     private void restoreInstanceState(Bundle savedInstanceState) {
-        if (savedInstanceState.containsKey(KEY_ID_GROUP)) {
-//            mIdGroupChecked = savedInstanceState.getInt(KEY_ID_GROUP);
-        }
         if (savedInstanceState.containsKey(KEY_CUR_FILTER)) {
             mCurFilter = savedInstanceState.getString(KEY_CUR_FILTER, "");
         }
@@ -197,10 +193,10 @@ public class NestedCategoryListFragment
             case VIEW_TRANSACTIONS: // view transactions
             case VIEW_TRANSACTIONS_SUB:
                 SearchParameters parameters = new SearchParameters();
-                CategorySub catSub = new CategorySub();
-                catSub.categId = category.getId();
-                catSub.categName = category.getName();
-                parameters.category = catSub;
+                CategoryForSearch categoryForSearch = new CategoryForSearch();
+                categoryForSearch.categId = category.getId();
+                categoryForSearch.categName = category.getName();
+                parameters.category = categoryForSearch;
 
                 if (menuId == ContextMenuIds.VIEW_TRANSACTIONS_SUB) {
                     parameters.searchSubCategory = true;
@@ -225,7 +221,6 @@ public class NestedCategoryListFragment
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         if (getExpandableListAdapter() != null && getExpandableListAdapter().getGroupCount() > 0) {
-            outState.putLong(KEY_ID_GROUP, ((CategoryExpandableListAdapter) getExpandableListAdapter()).getIdGroupChecked());
             outState.putString(KEY_CUR_FILTER, mCurFilter);
         }
     }

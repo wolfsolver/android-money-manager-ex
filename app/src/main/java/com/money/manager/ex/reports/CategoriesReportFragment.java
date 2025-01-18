@@ -38,7 +38,7 @@ import com.money.manager.ex.core.TransactionTypes;
 import com.money.manager.ex.core.UIHelper;
 import com.money.manager.ex.currency.CurrencyService;
 import com.money.manager.ex.database.QueryMobileData;
-import com.money.manager.ex.search.CategorySub;
+import com.money.manager.ex.search.CategoryForSearch;
 import com.money.manager.ex.search.SearchActivity;
 import com.money.manager.ex.search.SearchParameters;
 
@@ -193,8 +193,7 @@ public class CategoriesReportFragment
             whereClause = "/** */";
         }
         // use token to replace criteria
-        whereClause += "(" + QueryMobileData.Category + " Like '%" + newText + "%' OR " +
-                QueryMobileData.Subcategory + " Like '%" + newText + "%')/** */";
+        whereClause += "(" + QueryMobileData.CategoryFullName + " Like '%" + newText + "%')";
 
         //create arguments
         Bundle args = new Bundle();
@@ -212,9 +211,7 @@ public class CategoriesReportFragment
         //data to compose builder
         String[] projectionIn = new String[]{
             "ID AS _id", // this does not fetch anything, unfortunately.
-            QueryMobileData.CATEGID, QueryMobileData.Category,
-            QueryMobileData.SubcategID, QueryMobileData.Subcategory,
-                QueryMobileData.CategoryFullName,
+            QueryMobileData.CATEGID, QueryMobileData.CategoryFullName,
             "SUM(" + QueryMobileData.AmountBaseConvRate + ") AS TOTAL"
         };
 
@@ -224,9 +221,7 @@ public class CategoriesReportFragment
             selection += " AND " + whereClause;
         }
 
-        String groupBy = QueryMobileData.CATEGID + ", " + QueryMobileData.Category + ", " +
-                QueryMobileData.SubcategID + ", " + QueryMobileData.Subcategory
-                + ',' + QueryMobileData.CategoryFullName;
+        String groupBy = QueryMobileData.CATEGID + ", " +QueryMobileData.CategoryFullName;
 
         String having = null;
         if (!TextUtils.isEmpty(((CategoriesReportActivity) getActivity()).mFilter)) {
@@ -262,7 +257,7 @@ public class CategoriesReportFragment
      */
     @Override
     public void onListItemClick(ListView l, View v, int position, long id) {
-        CategorySub category = null;
+        CategoryForSearch category = null;
         try {
             category = getCategoryFromSelectedItem(l, position);
         } catch (Exception e) {
@@ -299,10 +294,7 @@ public class CategoriesReportFragment
         // process cursor
         while (cursor.moveToNext()) {
             ValuePieEntry item = new ValuePieEntry();
-            String category = cursor.getString(cursor.getColumnIndex(QueryMobileData.Category));
-            if (!TextUtils.isEmpty(cursor.getString(cursor.getColumnIndex(QueryMobileData.Subcategory)))) {
-                category += " : " + cursor.getString(cursor.getColumnIndex(QueryMobileData.Subcategory));
-            }
+            String category = cursor.getString(cursor.getColumnIndex(QueryMobileData.CategoryFullName));
             // total
             double total = Math.abs(cursor.getDouble(cursor.getColumnIndex("TOTAL")));
             // check if category is empty
@@ -346,7 +338,7 @@ public class CategoriesReportFragment
 
     // Private
 
-    private CategorySub getCategoryFromSelectedItem(ListView l, int position) {
+    private CategoryForSearch getCategoryFromSelectedItem(ListView l, int position) {
         // Reading item from the list view, not adapter!
         Object item = l.getItemAtPosition(position);
         if (item == null) return null;
@@ -355,15 +347,11 @@ public class CategoriesReportFragment
 
         ContentValues values = new ContentValues();
         DatabaseUtils.cursorLongToContentValues(cursor, QueryMobileData.CATEGID, values);
-        DatabaseUtils.cursorStringToContentValues(cursor, QueryMobileData.Category, values);
-        DatabaseUtils.cursorLongToContentValues(cursor, QueryMobileData.SubcategID, values);
-        DatabaseUtils.cursorStringToContentValues(cursor, QueryMobileData.Subcategory, values);
+        DatabaseUtils.cursorStringToContentValues(cursor, QueryMobileData.CategoryFullName, values);
 
-        CategorySub result = new CategorySub();
+        CategoryForSearch result = new CategoryForSearch();
         result.categId = values.getAsLong(QueryMobileData.CATEGID);
-        result.categName = values.getAsString(QueryMobileData.Category);
-        result.subCategId = values.getAsLong(QueryMobileData.SubcategID);
-        result.subCategName = values.getAsString(QueryMobileData.Subcategory);
+        result.categName = values.getAsString(QueryMobileData.CategoryFullName);
         return result;
     }
 

@@ -22,7 +22,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.os.Bundle;
 import android.text.Html;
-import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -36,6 +35,7 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -90,7 +90,7 @@ public class DashboardFragment
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         if (container == null) return null;
 
         // parse layout
@@ -117,7 +117,7 @@ public class DashboardFragment
     }
 
     @Override
-    public void onPrepareOptionsMenu(Menu menu) {
+    public void onPrepareOptionsMenu(@NonNull Menu menu) {
         super.onPrepareOptionsMenu(menu);
         //find menu dashboard
         MenuItem itemDashboard = menu.findItem(R.id.menu_dashboard);
@@ -209,7 +209,7 @@ public class DashboardFragment
     }
 
     @Override
-    public void onLoaderReset(Loader<Cursor> loader) {
+    public void onLoaderReset(@NonNull Loader<Cursor> loader) {
 
     }
 
@@ -220,13 +220,13 @@ public class DashboardFragment
         SQLiteQueryBuilder builder = new SQLiteQueryBuilder();
         QueryMobileData mobileData = new QueryMobileData(getContext());
         // data to compose builder
-        String[] projectionIn = new String[]{"ID AS _id", QueryMobileData.CATEGID, QueryMobileData.Category, QueryMobileData.SubcategID,
-                QueryMobileData.Subcategory, "SUM(" + QueryMobileData.AmountBaseConvRate + ") AS TOTAL", "COUNT(*) AS NUM"};
+        String[] projectionIn = new String[]{"ID AS _id", QueryMobileData.CATEGID, QueryMobileData.CategoryFullName,
+                "SUM(" + QueryMobileData.AmountBaseConvRate + ") AS TOTAL", "COUNT(*) AS NUM"};
 
         String selection = QueryMobileData.Status + "<>'V' AND " + QueryMobileData.TransactionType + " IN ('Withdrawal')"
                 + " AND (julianday(date('now')) - julianday(" + QueryMobileData.Date + ") <= 30)";
 
-        String groupBy = QueryMobileData.CATEGID + ", " + QueryMobileData.Category + ", " + QueryMobileData.SubcategID + ", " + QueryMobileData.Subcategory;
+        String groupBy = QueryMobileData.CATEGID + ", " + QueryMobileData.CategoryFullName  ;
         String having = "SUM(" + QueryMobileData.AmountBaseConvRate + ") < 0";
         String sortOrder = "ABS(SUM(" + QueryMobileData.AmountBaseConvRate + ")) DESC";
         String limit = "10";
@@ -236,7 +236,6 @@ public class DashboardFragment
         return builder.buildQuery(projectionIn, selection, groupBy, having, sortOrder, limit);
     }
 
-    @SuppressWarnings("deprecation")
     private String prepareQueryTopPayees() {
         SQLiteQueryBuilder builder = new SQLiteQueryBuilder();
         QueryMobileData mobileData = new QueryMobileData(getContext());
@@ -279,11 +278,8 @@ public class DashboardFragment
         int month = cursor.getInt(cursor.getColumnIndex(IncomeVsExpenseReportEntity.Month));
 
         // format month
-//        Calendar calendar = Calendar.getInstance();
-//        calendar.set(year, month - 1, 1);
         MmxDate dateTime = new MmxDate(year, month - 1, 1);
         // titles
-//        titles[1] = Integer.toString(year) + "-" + new SimpleDateFormat("MMM").format(calendar.getTime());
         titles[1] = year + "-" + dateTime.toString("MMM");
 
         // compose bundle for arguments
@@ -325,14 +321,11 @@ public class DashboardFragment
         // Create Title
         tableLayout.addView(createTableRow(new String[]{"<small><b>" + getString(R.string.category) + "</b></small>",
                 "<small><b>" + getString(R.string.quantity) + "</b></small>", "<small><b>" + getString(R.string.summary) + "</b></small>"}, new Float[]{1f,
-                null, null}, new Integer[]{null, Gravity.RIGHT, Gravity.RIGHT}, new Integer[][]{null, {0, 0, padding_in_px, 0}, null}));
+                null, null}, new Integer[]{null, Gravity.END, Gravity.END}, new Integer[][]{null, {0, 0, padding_in_px, 0}, null}));
         // add rows
         while (cursor.moveToNext()) {
             // load values
-            String category = "<b>" + cursor.getString(cursor.getColumnIndex(QueryMobileData.Category)) + "</b>";
-            if (!TextUtils.isEmpty(cursor.getString(cursor.getColumnIndex(QueryMobileData.Subcategory)))) {
-                category += " : " + cursor.getString(cursor.getColumnIndex(QueryMobileData.Subcategory));
-            }
+            String category = "<b>" + cursor.getString(cursor.getColumnIndex(QueryMobileData.CategoryFullName)) + "</b>";
             double total = cursor.getDouble(cursor.getColumnIndex("TOTAL"));
             long num = cursor.getLong(cursor.getColumnIndex("NUM"));
             // Add Row
@@ -341,7 +334,7 @@ public class DashboardFragment
                             "<small>" + currencyService.getCurrencyFormatted(
                                     currencyService.getBaseCurrencyId(), MoneyFactory.fromDouble(total)) + "</small>"},
                     new Float[]{1f, null, null},
-                    new Integer[]{null, Gravity.RIGHT, Gravity.RIGHT}, new Integer[][]{null, {0, 0, padding_in_px, 0}, null}));
+                    new Integer[]{null, Gravity.END, Gravity.END}, new Integer[][]{null, {0, 0, padding_in_px, 0}, null}));
         }
         // return Layout
         return layout;
@@ -360,7 +353,7 @@ public class DashboardFragment
         // Create Title
         tableLayout.addView(createTableRow(new String[]{"<small><b>" + getString(R.string.payee) + "</b></small>",
                 "<small><b>" + getString(R.string.quantity) + "</b></small>", "<small><b>" + getString(R.string.summary) + "</b></small>"}, new Float[]{1f,
-                null, null}, new Integer[]{null, Gravity.RIGHT, Gravity.RIGHT}, new Integer[][]{null, {0, 0, padding_in_px, 0}, null}));
+                null, null}, new Integer[]{null, Gravity.END, Gravity.END}, new Integer[][]{null, {0, 0, padding_in_px, 0}, null}));
         // add rows
         while (cursor.moveToNext()) {
             // load values
@@ -373,7 +366,7 @@ public class DashboardFragment
                             "<small>" + currencyService.getCurrencyFormatted(
                                     currencyService.getBaseCurrencyId(), MoneyFactory.fromDouble(total)) + "</small>"},
                     new Float[]{1f, null, null},
-                    new Integer[]{null, Gravity.RIGHT, Gravity.RIGHT},
+                    new Integer[]{null, Gravity.END, Gravity.END},
                     new Integer[][]{null, {0, 0, padding_in_px, 0}, null}));
         }
 
@@ -385,7 +378,7 @@ public class DashboardFragment
         LayoutInflater inflater = (LayoutInflater) getActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         LinearLayout layout = (LinearLayout) inflater.inflate(R.layout.dashboard_summary_layout, null);
         CurrencyService currencyService = new CurrencyService(getActivity().getApplicationContext());
-        Core core = new Core(getActivity().getApplicationContext());
+//        Core core = new Core(getActivity().getApplicationContext());
 
         // Textview Title
         TextView title = layout.findViewById(R.id.textViewTitle);
@@ -399,7 +392,7 @@ public class DashboardFragment
             double total = cursor.getDouble(cursor.getColumnIndex(QueryBillDeposits.AMOUNT));
             int daysLeft = cursor.getInt(cursor.getColumnIndex(QueryBillDeposits.DAYSLEFT));
             long currencyId = cursor.getLong(cursor.getColumnIndex(QueryBillDeposits.CURRENCYID));
-            String daysLeftText = "";
+            String daysLeftText;
             boolean hasNumber = getString(daysLeft > 0 ? R.string.days_remaining : R.string.days_overdue).indexOf("%d") >= 0;
             daysLeftText = String.format( (hasNumber ? getString(daysLeft > 0 ? R.string.days_remaining : R.string.days_overdue) : "%d " + getString(daysLeft > 0 ? R.string.days_remaining : R.string.days_overdue) ),
                     Math.abs(daysLeft));
@@ -407,7 +400,7 @@ public class DashboardFragment
             TableRow row = createTableRow(new String[]{"<small>" + payee + "</small>",
                             "<small>" + currencyService.getCurrencyFormatted(currencyId, MoneyFactory.fromDouble(total)) + "</small>",
                             "<small>" + daysLeftText + "</small>"}, new Float[]{1f, null, 1f},
-                    new Integer[]{null, Gravity.RIGHT, Gravity.RIGHT}, new Integer[][]{null, {0, 0, padding_in_px, 0}, null});
+                    new Integer[]{null, Gravity.END, Gravity.END}, new Integer[][]{null, {0, 0, padding_in_px, 0}, null});
             TextView txt = (TextView) row.getChildAt(2);
             UIHelper uiHelper = new UIHelper(getActivity());
             int color = daysLeft >= 0
@@ -440,7 +433,7 @@ public class DashboardFragment
             if (gravity[i] != null)
                 txtField.setGravity(gravity[i]);
             // set text
-            txtField.setText(Html.fromHtml(fields[i]));
+            txtField.setText(Html.fromHtml(fields[i], Html.FROM_HTML_MODE_LEGACY));
             // set singleline
             txtField.setSingleLine(true);
             // add field
