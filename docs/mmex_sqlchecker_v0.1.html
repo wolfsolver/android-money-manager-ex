@@ -173,6 +173,7 @@
 SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
     SELECT 
         'CHECKINGACCOUNT_V1 MISSING ACCOUNT' AS error_code, 
+        'E' as severity,	
         'CHECKINGACCOUNT_V1' AS source_table_name, 
         'TRANSID' AS source_key_name, 
         CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
@@ -190,6 +191,7 @@ SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
     
     UNION SELECT 
         'CHECKINGACCOUNT_V1 MISSING TOACCOUNT' AS error_code, 
+	        'E' as severity,
         'CHECKINGACCOUNT_V1' AS source_table_name, 
         'TRANSID' AS source_key_name, 
         CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
@@ -207,6 +209,7 @@ SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
     
     UNION SELECT 
         'DELETEDTIME_NULL' AS error_code, 
+	        'I' as severity,
         'CHECKINGACCOUNT_V1' AS source_table_name, 
         'TRANSID' AS source_key_name, 
         CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
@@ -223,6 +226,7 @@ SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
     
     UNION SELECT 
         'TRANSDATE_BEFORE_ACCOUNT' AS error_code, 
+	        'E' as severity,
         'CHECKINGACCOUNT_V1' AS source_table_name, 
         'TRANSID' AS source_key_name, 
         CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
