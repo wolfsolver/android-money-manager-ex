@@ -141,7 +141,42 @@
             // L'errore è già stato gestito e mostrato da loadAndInitializeSqlJs
             console.error("SQL.js Load failed, we cannot check right now.", err);
         });
+		
 
+		// load remote sql
+		async function leggiSQLRemoto(url) {
+		  try {
+			const response = await fetch(url);
+
+			if (!response.ok) {
+			  throw new Error(`Error while reading remote SQL: ${response.status}`);
+			}
+
+			const testoFile = await response.text(); // Se il file è di testo
+			// const datiFile = await response.json(); // Se il file è JSON
+			// const blobFile = await response.blob(); // Se il file è binario (immagine, ecc.)
+
+			return testoFile; // Restituisce il contenuto del file come stringa
+		  } catch (error) {
+			console.error("Error while reading remote SQL:", error);
+			return null;
+		  }
+		}
+
+		const urlRemoteSQL = 'https://raw.githubusercontent.com/wolfsolver/android-money-manager-ex/refs/heads/master/docs/mmex_sql_checker.sql';
+
+		let anomaliesQuerySQL;
+		leggiSQLRemoto(urlRemoteSQL)
+		  .then(contenuto => {
+			if (contenuto) {
+              showStatusMessage("Remote SQL loaded.", "success", true);
+				// Query SQL fornita dall'utente per identificare le anomalie.
+				anomaliesQuerySQL = "SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (" +
+										contenuto + 
+										") AS SubQueryAlias;";
+				console.log("SQLQuery:", anomaliesQuerySQL);			}
+		  });		
+			
         // Listener per il cambio del file nel campo di input
         dbFileElement.addEventListener('change', async (event) => {
             if (!sqlJsModule) { // Verifica se SQL.js è pronto
@@ -169,88 +204,16 @@
             }
         });
         
-        // Query SQL fornita dall'utente per identificare le anomalie.
-        const anomaliesQuerySQL = `
-SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
-    SELECT 
-        'CHECKINGACCOUNT_V1 MISSING ACCOUNT' AS error_code, 
-        'E' as severity, 
-        'CHECKINGACCOUNT_V1' AS source_table_name, 
-        'TRANSID' AS source_key_name, 
-        CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
-        NULL AS source_column_name, 
-        NULL AS source_column_value, 
-        'ACCOUNTID' AS source_foreignkey_column, 
-        CHECKINGACCOUNT_V1.ACCOUNTID AS source_foreignkey_value, 
-        'ACCOUNTID' AS associated_key_name, 
-        ACCOUNTLIST_V1.ACCOUNTID AS associated_key_value, 
-        NULL AS associated_column_name, 
-        NULL AS associated_column_value 
-    FROM CHECKINGACCOUNT_V1 
-    LEFT JOIN ACCOUNTLIST_V1 ON ACCOUNTLIST_V1.ACCOUNTID = CHECKINGACCOUNT_V1.ACCOUNTID 
-    WHERE ACCOUNTLIST_V1.ACCOUNTID IS NULL AND CHECKINGACCOUNT_V1.ACCOUNTID > 0 AND (CHECKINGACCOUNT_V1.DELETEDTIME IS NULL OR CHECKINGACCOUNT_V1.DELETEDTIME = "")
-    
-    UNION SELECT 
-        'CHECKINGACCOUNT_V1 MISSING TOACCOUNT' AS error_code, 
-        'E' as severity, 
-        'CHECKINGACCOUNT_V1' AS source_table_name, 
-        'TRANSID' AS source_key_name, 
-        CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
-        NULL AS source_column_name, 
-        NULL AS source_column_value, 
-        'TOACCOUNTID' AS source_foreignkey_column, 
-        CHECKINGACCOUNT_V1.TOACCOUNTID AS source_foreignkey_value, 
-        'TOACCOUNTID' AS associated_key_name, 
-        ACCOUNTLIST_V1.ACCOUNTID AS associated_key_value, 
-        NULL AS associated_column_name, 
-        NULL AS associated_column_value 
-    FROM CHECKINGACCOUNT_V1 
-    LEFT JOIN ACCOUNTLIST_V1 ON ACCOUNTLIST_V1.ACCOUNTID = CHECKINGACCOUNT_V1.TOACCOUNTID 
-    WHERE ACCOUNTLIST_V1.ACCOUNTID IS NULL AND CHECKINGACCOUNT_V1.TOACCOUNTID > 0 AND (CHECKINGACCOUNT_V1.DELETEDTIME IS NULL OR CHECKINGACCOUNT_V1.DELETEDTIME = "")
-    
-    UNION SELECT 
-        'DELETEDTIME_NULL' AS error_code, 
-        'I' as severity, 
-        'CHECKINGACCOUNT_V1' AS source_table_name, 
-        'TRANSID' AS source_key_name, 
-        CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
-        'DELETEDTIME' AS source_column_name, 
-        CHECKINGACCOUNT_V1.DELETEDTIME AS source_column_value, 
-        NULL AS source_foreignkey_column,
-        NULL AS source_foreignkey_value,
-        NULL AS associated_key_name, 
-        NULL AS associated_key_value, 
-        NULL AS associated_column_name, 
-        NULL AS associated_column_value 
-    FROM CHECKINGACCOUNT_V1 
-    WHERE CHECKINGACCOUNT_V1.DELETEDTIME IS NULL
-    
-    UNION SELECT 
-        'TRANSDATE_BEFORE_ACCOUNT' AS error_code, 
-        'E' as severity, 
-        'CHECKINGACCOUNT_V1' AS source_table_name, 
-        'TRANSID' AS source_key_name, 
-        CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
-        'TRANSDATE' AS source_column_name, 
-        CHECKINGACCOUNT_V1.TRANSDATE AS source_column_value, 
-        'ACCOUNTID' AS source_foreignkey_column, 
-        CHECKINGACCOUNT_V1.ACCOUNTID AS source_foreignkey_value, 
-        'ACCOUNTID' AS associated_key_name, 
-        ACCOUNTLIST_V1.ACCOUNTID AS associated_key_value, 
-        'INITIALDATE' AS associated_column_name, 
-        ACCOUNTLIST_V1.INITIALDATE AS associated_column_value 
-    FROM CHECKINGACCOUNT_V1 
-    JOIN ACCOUNTLIST_V1 ON ACCOUNTLIST_V1.ACCOUNTID = CHECKINGACCOUNT_V1.ACCOUNTID 
-    WHERE CHECKINGACCOUNT_V1.TRANSDATE < ACCOUNTLIST_V1.INITIALDATE AND (CHECKINGACCOUNT_V1.DELETEDTIME IS NULL OR CHECKINGACCOUNT_V1.DELETEDTIME = "")
-) AS SubQueryAlias;
-        `;
-
         // Carica e visualizza i dati risultanti dalla query SQL delle anomalie
         async function loadAnomaliesData() {
             if (!db) { // Verifica se il database è caricato
                 showStatusMessage("No Db loaded.", "error");
                 return;
             }
+			if (!anomaliesQuerySQL) {
+                showStatusMessage("No remote sql available.", "error");
+                return;
+			}
             resultsSectionElement.classList.remove('hidden'); // Mostra la sezione dei risultati
             tableBodyElement.innerHTML = '';      // Pulisci contenuto precedente
             tableHeaderElement.innerHTML = '';    // Pulisci intestazione precedente
