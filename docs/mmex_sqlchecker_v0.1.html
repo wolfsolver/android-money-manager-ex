@@ -277,8 +277,13 @@ SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
                 // Popola le righe della tabella con i dati
                 values.forEach((rowArray, rowIndex) => {
                     const tr = document.createElement('tr');
-                    tr.className = rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'; // Stile alternato per le righe
                     
+					// Verifica se la terza colonna contiene "E"
+					if (rowArray.length > 2 && rowArray[2] === 'E') {
+						tr.className = 'bg-red-200'; // Applica uno sfondo rosso chiaro
+					} else {
+						tr.className = rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'; // Stile alternato per le righe
+					}                    
                     // Crea le celle per ogni valore della riga
                     rowArray.forEach(cellValue => {
                         const td = document.createElement('td');
