@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Visualizzazione Anomalie DB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+        }
+        .table-container {
+            max-height: 70vh; /* Altezza massima per lo scroll, aumentata leggermente */
+            overflow-y: auto; /* Scroll verticale se necessario */
+        }
+        table th, table td {
+            padding: 0.75rem; /* Tailwind p-3 */
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
+            white-space: nowrap; /* Evita che il testo vada a capo */
+        }
+        table th {
+            background-color: #f9fafb; /* Tailwind gray-50 */
+            font-weight: 600; /* Tailwind font-semibold */
+            position: sticky; /* Intestazioni fisse durante lo scroll */
+            top: 0;
+            z-index: 10;
+        }
+        #statusMessage {
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+        .status-success {
+            background-color: #d1fae5; /* Tailwind green-100 */
+            color: #065f46; /* Tailwind green-800 */
+            border: 1px solid #6ee7b7; /* Tailwind green-300 */
+        }
+        .status-error {
+            background-color: #fee2e2; /* Tailwind red-100 */
+            color: #991b1b; /* Tailwind red-800 */
+            border: 1px solid #fca5a5; /* Tailwind red-300 */
+        }
+        .status-info {
+            background-color: #e0f2fe; /* Tailwind light-blue-100 (o simile) */
+            color: #0c4a6e; /* Tailwind light-blue-800 (o simile) */
+            border: 1px solid #7dd3fc; /* Tailwind light-blue-300 (o simile) */
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="container mx-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800">Strumento di Visualizzazione Anomalie Database</h1>
+            <p class="text-gray-600 mt-2">Carica un file database SQLite (.db, .sqlite) per visualizzare le anomalie identificate dalla query SQL.</p>
+        </header>
+
+        <section class="mb-6">
+            <label for="dbFile" class="block text-sm font-medium text-gray-700 mb-2">Carica File Database SQLite:</label>
+            <input type="file" id="dbFile" accept=".db,.sqlite,.sqlite3" class="block w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 cursor-pointer focus:outline-none p-2" disabled>
+        </section>
+
+        <div id="statusMessage" class="hidden"></div>
+
+        <section id="resultsSection" class="hidden">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Anomalie Identificate</h2>
+            <div class="table-container border border-gray-200 rounded-lg shadow">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead id="tableHeader">
+                        </thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                </table>
+            </div>
+            <p id="noResultsMessage" class="text-gray-500 mt-4 hidden">Nessuna anomalia trovata dalla query.</p>
+        </section>
+    </div>
+
+    <script>
+        let db; // Variabile per l'istanza del database SQL.js
+        const dbFileElement = document.getElementById('dbFile');
+        const tableHeaderElement = document.getElementById('tableHeader');
+        const tableBodyElement = document.getElementById('tableBody');
+        const resultsSectionElement = document.getElementById('resultsSection');
+        const noResultsMessageElement = document.getElementById('noResultsMessage');
+        const statusMessageElement = document.getElementById('statusMessage');
+        
+        let sqlJsModule; // Variabile per il modulo SQL.js inizializzato
+
+        // Funzione per mostrare messaggi di stato all'utente
+        function showStatusMessage(message, type = "info", autoHide = true) {
+            statusMessageElement.textContent = message;
+            statusMessageElement.className = ''; // Resetta le classi precedenti
+            statusMessageElement.classList.add('p-4', 'rounded-md', 'mb-4', 'font-medium'); // Classi base Tailwind
+            if (type === "success") {
+                statusMessageElement.classList.add('status-success');
+            } else if (type === "error") {
+                statusMessageElement.classList.add('status-error');
+            } else { // "info" o default
+                statusMessageElement.classList.add('status-info');
+            }
+            statusMessageElement.classList.remove('hidden'); // Rendi visibile il messaggio
+
+            if (autoHide) { // Nascondi automaticamente dopo 5 secondi se richiesto
+                setTimeout(() => {
+                    statusMessageElement.classList.add('hidden');
+                }, 5000);
+            }
+        }
+        
+        // Funzione asincrona per caricare e inizializzare SQL.js
+        async function loadAndInitializeSqlJs() {
+            showStatusMessage("Caricamento libreria database...", "info", false);
+            try {
+                // window.initSqlJs è la funzione globale esposta dalla libreria sql-wasm.js
+                const module = await window.initSqlJs({
+                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}` // Percorso al file .wasm
+                });
+                return module;
+            } catch (err) {
+                console.error("Errore dettagliato durante l'inizializzazione di SQL.js:", err);
+                const errorMessage = err.message || (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err));
+                showStatusMessage(`Errore critico: Impossibile caricare la libreria del database. Dettagli: ${errorMessage}`, "error", false);
+                dbFileElement.disabled = true; // Mantiene disabilitato l'upload se il caricamento fallisce
+                throw err; // Rilancia l'errore per fermare ulteriori tentativi
+            }
+        }
+
+        // Inizializza SQL.js all'avvio dello script
+        loadAndInitializeSqlJs().then(initializedModule => {
+            sqlJsModule = initializedModule; // Salva il modulo inizializzato
+            console.log("SQL.js caricato e inizializzato.");
+            dbFileElement.disabled = false; // Abilita l'input del file
+            showStatusMessage("Libreria Database pronta. Seleziona un file.", "success", true);
+        }).catch(err => {
+            // L'errore è già stato gestito e mostrato da loadAndInitializeSqlJs
+            console.error("Inizializzazione SQL.js fallita, l'app non può funzionare correttamente.", err);
+        });
+
+        // Listener per il cambio del file nel campo di input
+        dbFileElement.addEventListener('change', async (event) => {
+            if (!sqlJsModule) { // Verifica se SQL.js è pronto
+                showStatusMessage("Libreria Database non ancora pronta o caricamento fallito. Prova a ricaricare la pagina.", "error", false);
+                return;
+            }
+            const file = event.target.files[0];
+            if (file) {
+                showStatusMessage("Caricamento database...", "info", false);
+                resultsSectionElement.classList.add('hidden'); // Nascondi risultati precedenti
+                tableBodyElement.innerHTML = ''; // Pulisci corpo tabella
+                tableHeaderElement.innerHTML = ''; // Pulisci intestazione tabella
+
+                const arrayBuffer = await file.arrayBuffer(); // Leggi il file come ArrayBuffer
+                try {
+                    db = new sqlJsModule.Database(new Uint8Array(arrayBuffer)); // Crea il database SQL.js
+                    showStatusMessage("Database caricato con successo.", "success");
+                    // ensureChecktableExists(); // Non più necessaria una tabella 'checktable'
+                    await loadAnomaliesData(); // Carica e visualizza i dati delle anomalie
+                } catch (err) {
+                    console.error("Errore durante il caricamento del database:", err);
+                    showStatusMessage(`Errore durante il caricamento del database: ${err.message}`, "error");
+                    db = null; // Resetta l'istanza del db in caso di errore
+                }
+            }
+        });
+        
+        // Query SQL fornita dall'utente per identificare le anomalie.
+        const anomaliesQuerySQL = `
+SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
+    SELECT 
+        'CHECKINGACCOUNT_V1 MISSING ACCOUNT' AS error_code, 
+        'CHECKINGACCOUNT_V1' AS source_table_name, 
+        'TRANSID' AS source_key_name, 
+        CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
+        NULL AS source_column_name, 
+        NULL AS source_column_value, 
+        'ACCOUNTID' AS source_foreignkey_column, 
+        CHECKINGACCOUNT_V1.ACCOUNTID AS source_foreignkey_value, 
+        'ACCOUNTID' AS associated_key_name, 
+        ACCOUNTLIST_V1.ACCOUNTID AS associated_key_value, 
+        NULL AS associated_column_name, 
+        NULL AS associated_column_value 
+    FROM CHECKINGACCOUNT_V1 
+    LEFT JOIN ACCOUNTLIST_V1 ON ACCOUNTLIST_V1.ACCOUNTID = CHECKINGACCOUNT_V1.ACCOUNTID 
+    WHERE ACCOUNTLIST_V1.ACCOUNTID IS NULL AND CHECKINGACCOUNT_V1.ACCOUNTID > 0 AND (CHECKINGACCOUNT_V1.DELETEDTIME IS NULL OR CHECKINGACCOUNT_V1.DELETEDTIME = "")
+    
+    UNION SELECT 
+        'CHECKINGACCOUNT_V1 MISSING TOACCOUNT' AS error_code, 
+        'CHECKINGACCOUNT_V1' AS source_table_name, 
+        'TRANSID' AS source_key_name, 
+        CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
+        NULL AS source_column_name, 
+        NULL AS source_column_value, 
+        'TOACCOUNTID' AS source_foreignkey_column, 
+        CHECKINGACCOUNT_V1.TOACCOUNTID AS source_foreignkey_value, 
+        'TOACCOUNTID' AS associated_key_name, 
+        ACCOUNTLIST_V1.ACCOUNTID AS associated_key_value, 
+        NULL AS associated_column_name, 
+        NULL AS associated_column_value 
+    FROM CHECKINGACCOUNT_V1 
+    LEFT JOIN ACCOUNTLIST_V1 ON ACCOUNTLIST_V1.ACCOUNTID = CHECKINGACCOUNT_V1.TOACCOUNTID 
+    WHERE ACCOUNTLIST_V1.ACCOUNTID IS NULL AND CHECKINGACCOUNT_V1.TOACCOUNTID > 0 AND (CHECKINGACCOUNT_V1.DELETEDTIME IS NULL OR CHECKINGACCOUNT_V1.DELETEDTIME = "")
+    
+    UNION SELECT 
+        'DELETEDTIME_NULL' AS error_code, 
+        'CHECKINGACCOUNT_V1' AS source_table_name, 
+        'TRANSID' AS source_key_name, 
+        CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
+        'DELETEDTIME' AS source_column_name, 
+        CHECKINGACCOUNT_V1.DELETEDTIME AS source_column_value, 
+        NULL AS source_foreignkey_column,
+        NULL AS source_foreignkey_value,
+        NULL AS associated_key_name, 
+        NULL AS associated_key_value, 
+        NULL AS associated_column_name, 
+        NULL AS associated_column_value 
+    FROM CHECKINGACCOUNT_V1 
+    WHERE CHECKINGACCOUNT_V1.DELETEDTIME IS NULL
+    
+    UNION SELECT 
+        'TRANSDATE_BEFORE_ACCOUNT' AS error_code, 
+        'CHECKINGACCOUNT_V1' AS source_table_name, 
+        'TRANSID' AS source_key_name, 
+        CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
+        'TRANSDATE' AS source_column_name, 
+        CHECKINGACCOUNT_V1.TRANSDATE AS source_column_value, 
+        'ACCOUNTID' AS source_foreignkey_column, 
+        CHECKINGACCOUNT_V1.ACCOUNTID AS source_foreignkey_value, 
+        'ACCOUNTID' AS associated_key_name, 
+        ACCOUNTLIST_V1.ACCOUNTID AS associated_key_value, 
+        'INITIALDATE' AS associated_column_name, 
+        ACCOUNTLIST_V1.INITIALDATE AS associated_column_value 
+    FROM CHECKINGACCOUNT_V1 
+    JOIN ACCOUNTLIST_V1 ON ACCOUNTLIST_V1.ACCOUNTID = CHECKINGACCOUNT_V1.ACCOUNTID 
+    WHERE CHECKINGACCOUNT_V1.TRANSDATE < ACCOUNTLIST_V1.INITIALDATE AND (CHECKINGACCOUNT_V1.DELETEDTIME IS NULL OR CHECKINGACCOUNT_V1.DELETEDTIME = "")
+) AS SubQueryAlias;
+        `;
+
+        // Carica e visualizza i dati risultanti dalla query SQL delle anomalie
+        async function loadAnomaliesData() {
+            if (!db) { // Verifica se il database è caricato
+                showStatusMessage("Nessun database caricato.", "error");
+                return;
+            }
+            resultsSectionElement.classList.remove('hidden'); // Mostra la sezione dei risultati
+            tableBodyElement.innerHTML = '';      // Pulisci contenuto precedente
+            tableHeaderElement.innerHTML = '';    // Pulisci intestazione precedente
+            noResultsMessageElement.classList.add('hidden'); // Nascondi messaggio "nessun risultato"
+
+            try {
+                const results = db.exec(anomaliesQuerySQL); // Esegui la query delle anomalie
+                
+                if (results.length === 0 || results[0].values.length === 0) {
+                    noResultsMessageElement.classList.remove('hidden'); // Mostra messaggio se non ci sono risultati
+                    console.log("Nessun dato restituito dalla query delle anomalie.");
+                    return;
+                }
+
+                const columns = results[0].columns; // Ottieni i nomi delle colonne dalla query
+                const values = results[0].values;   // Ottieni i valori delle righe
+
+                // Crea l'intestazione della tabella
+                const headerRow = document.createElement('tr');
+                columns.forEach(colName => {
+                    const th = document.createElement('th');
+                    th.textContent = colName;
+                    th.className = "px-3 py-3.5 text-left text-sm font-semibold text-gray-900";
+                    headerRow.appendChild(th);
+                });
+                // Rimossa la colonna "Azione"
+                tableHeaderElement.appendChild(headerRow);
+
+                // Popola le righe della tabella con i dati
+                values.forEach((rowArray, rowIndex) => {
+                    const tr = document.createElement('tr');
+                    tr.className = rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'; // Stile alternato per le righe
+                    
+                    // Crea le celle per ogni valore della riga
+                    rowArray.forEach(cellValue => {
+                        const td = document.createElement('td');
+                        td.textContent = cellValue === null || typeof cellValue === 'undefined' ? '' : cellValue;
+                        td.className = "whitespace-nowrap px-3 py-4 text-sm text-gray-500";
+                        tr.appendChild(td);
+                    });
+                    // Rimosso il pulsante "FIX" e la cella corrispondente
+                    tableBodyElement.appendChild(tr);
+                });
+
+            } catch (err) {
+                console.error("Errore durante l'esecuzione della query delle anomalie:", err);
+                showStatusMessage(`Errore SQL: ${err.message}`, "error", false);
+                resultsSectionElement.classList.add('hidden');
+            }
+        }
+        
+        // Funzionalità del modal e del fix rimossa.
+        // Le funzioni openFixModal, e gli event listener per cancelFixButton e fixFormElement sono stati rimossi.
+        // La logica window.onclick per chiudere il modal è stata rimossa.
+
+    </script>
+</body>
+</html>
