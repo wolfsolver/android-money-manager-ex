@@ -55,19 +55,20 @@
 <body class="p-4 md:p-8">
     <div class="container mx-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl font-bold text-gray-800">Strumento di Visualizzazione Anomalie Database</h1>
-            <p class="text-gray-600 mt-2">Carica un file database MMEX (.mmb) per visualizzare le anomalie identificate dalla query SQL.</p>
+            <h1 class="text-3xl font-bold text-gray-800">MMEX Checker: Check if your MMEX DB (.mmb) has error.</h1>
+            <p class="text-gray-600 mt-2">Please load your MMB file to verify if there is some inconsistence. We do not store your data.</p>
+            <p>if you prefer you can download html file directly on your pc to perform local test.</p>
         </header>
 
         <section class="mb-6">
-            <label for="dbFile" class="block text-sm font-medium text-gray-700 mb-2">Carica File Database SQLite:</label>
-            <input type="file" id="dbFile" accept=".mmb,.db,.sqlite,.sqlite3" class="block w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 cursor-pointer focus:outline-none p-2" disabled>
+            <label for="dbFile" class="block text-sm font-medium text-gray-700 mb-2">Your MMB File:</label>
+            <input type="file" id="dbFile" accept=".mmb, .db,.sqlite,.sqlite3" class="block w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 cursor-pointer focus:outline-none p-2" disabled>
         </section>
 
         <div id="statusMessage" class="hidden"></div>
 
         <section id="resultsSection" class="hidden">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Anomalie Identificate</h2>
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Error found:</h2>
             <div class="table-container border border-gray-200 rounded-lg shadow">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead id="tableHeader">
@@ -76,7 +77,7 @@
                         </tbody>
                 </table>
             </div>
-            <p id="noResultsMessage" class="text-gray-500 mt-4 hidden">Nessuna anomalia trovata dalla query.</p>
+            <p id="noResultsMessage" class="text-gray-500 mt-4 hidden">Your db seems clear with no error :-).</p>
         </section>
     </div>
 
@@ -114,7 +115,7 @@
         
         // Funzione asincrona per caricare e inizializzare SQL.js
         async function loadAndInitializeSqlJs() {
-            showStatusMessage("Caricamento libreria database...", "info", false);
+            showStatusMessage("Loading library...", "info", false);
             try {
                 // window.initSqlJs è la funzione globale esposta dalla libreria sql-wasm.js
                 const module = await window.initSqlJs({
@@ -122,9 +123,9 @@
                 });
                 return module;
             } catch (err) {
-                console.error("Errore dettagliato durante l'inizializzazione di SQL.js:", err);
+                console.error("Detail error while loading SQL.js:", err);
                 const errorMessage = err.message || (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err));
-                showStatusMessage(`Errore critico: Impossibile caricare la libreria del database. Dettagli: ${errorMessage}`, "error", false);
+                showStatusMessage(`Critial error: Unable to load library: ${errorMessage}`, "error", false);
                 dbFileElement.disabled = true; // Mantiene disabilitato l'upload se il caricamento fallisce
                 throw err; // Rilancia l'errore per fermare ulteriori tentativi
             }
@@ -133,23 +134,23 @@
         // Inizializza SQL.js all'avvio dello script
         loadAndInitializeSqlJs().then(initializedModule => {
             sqlJsModule = initializedModule; // Salva il modulo inizializzato
-            console.log("SQL.js caricato e inizializzato.");
+            console.log("SQL.js loaded and ready.");
             dbFileElement.disabled = false; // Abilita l'input del file
-            showStatusMessage("Libreria Database pronta. Seleziona un file.", "success", true);
+            showStatusMessage("All stuff ready. Load your db.", "success", true);
         }).catch(err => {
             // L'errore è già stato gestito e mostrato da loadAndInitializeSqlJs
-            console.error("Inizializzazione SQL.js fallita, l'app non può funzionare correttamente.", err);
+            console.error("SQL.js Load failed, we cannot check right now.", err);
         });
 
         // Listener per il cambio del file nel campo di input
         dbFileElement.addEventListener('change', async (event) => {
             if (!sqlJsModule) { // Verifica se SQL.js è pronto
-                showStatusMessage("Libreria Database non ancora pronta o caricamento fallito. Prova a ricaricare la pagina.", "error", false);
+                showStatusMessage("Failed to laod library. Try reloading page.", "error", false);
                 return;
             }
             const file = event.target.files[0];
             if (file) {
-                showStatusMessage("Caricamento database...", "info", false);
+                showStatusMessage("Loading Database...", "info", false);
                 resultsSectionElement.classList.add('hidden'); // Nascondi risultati precedenti
                 tableBodyElement.innerHTML = ''; // Pulisci corpo tabella
                 tableHeaderElement.innerHTML = ''; // Pulisci intestazione tabella
@@ -157,12 +158,12 @@
                 const arrayBuffer = await file.arrayBuffer(); // Leggi il file come ArrayBuffer
                 try {
                     db = new sqlJsModule.Database(new Uint8Array(arrayBuffer)); // Crea il database SQL.js
-                    showStatusMessage("Database caricato con successo.", "success");
+                    showStatusMessage("DB correctly load.", "success");
                     // ensureChecktableExists(); // Non più necessaria una tabella 'checktable'
                     await loadAnomaliesData(); // Carica e visualizza i dati delle anomalie
                 } catch (err) {
-                    console.error("Errore durante il caricamento del database:", err);
-                    showStatusMessage(`Errore durante il caricamento del database: ${err.message}`, "error");
+                    console.error("Error while loading DB:", err);
+                    showStatusMessage(`Error while loading DB: ${err.message}`, "error");
                     db = null; // Resetta l'istanza del db in caso di errore
                 }
             }
@@ -173,7 +174,7 @@
 SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
     SELECT 
         'CHECKINGACCOUNT_V1 MISSING ACCOUNT' AS error_code, 
-        'E' as severity,	
+        'E' as severity, 
         'CHECKINGACCOUNT_V1' AS source_table_name, 
         'TRANSID' AS source_key_name, 
         CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
@@ -191,7 +192,7 @@ SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
     
     UNION SELECT 
         'CHECKINGACCOUNT_V1 MISSING TOACCOUNT' AS error_code, 
-	        'E' as severity,
+        'E' as severity, 
         'CHECKINGACCOUNT_V1' AS source_table_name, 
         'TRANSID' AS source_key_name, 
         CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
@@ -209,7 +210,7 @@ SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
     
     UNION SELECT 
         'DELETEDTIME_NULL' AS error_code, 
-	        'I' as severity,
+        'I' as severity, 
         'CHECKINGACCOUNT_V1' AS source_table_name, 
         'TRANSID' AS source_key_name, 
         CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
@@ -226,7 +227,7 @@ SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
     
     UNION SELECT 
         'TRANSDATE_BEFORE_ACCOUNT' AS error_code, 
-	        'E' as severity,
+        'E' as severity, 
         'CHECKINGACCOUNT_V1' AS source_table_name, 
         'TRANSID' AS source_key_name, 
         CHECKINGACCOUNT_V1.TRANSID AS source_key_value, 
@@ -247,7 +248,7 @@ SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
         // Carica e visualizza i dati risultanti dalla query SQL delle anomalie
         async function loadAnomaliesData() {
             if (!db) { // Verifica se il database è caricato
-                showStatusMessage("Nessun database caricato.", "error");
+                showStatusMessage("No Db loaded.", "error");
                 return;
             }
             resultsSectionElement.classList.remove('hidden'); // Mostra la sezione dei risultati
@@ -260,7 +261,7 @@ SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
                 
                 if (results.length === 0 || results[0].values.length === 0) {
                     noResultsMessageElement.classList.remove('hidden'); // Mostra messaggio se non ci sono risultati
-                    console.log("Nessun dato restituito dalla query delle anomalie.");
+                    console.log("No check available.");
                     return;
                 }
 
@@ -281,13 +282,14 @@ SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
                 // Popola le righe della tabella con i dati
                 values.forEach((rowArray, rowIndex) => {
                     const tr = document.createElement('tr');
-                    
-					// Verifica se la terza colonna contiene "E"
+
+					// Verifica se la seconda colonna contiene "E"
 					if (rowArray.length > 2 && rowArray[2] === 'E') {
 						tr.className = 'bg-red-200'; // Applica uno sfondo rosso chiaro
 					} else {
 						tr.className = rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'; // Stile alternato per le righe
-					}                    
+					}
+                    
                     // Crea le celle per ogni valore della riga
                     rowArray.forEach(cellValue => {
                         const td = document.createElement('td');
@@ -300,8 +302,8 @@ SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
                 });
 
             } catch (err) {
-                console.error("Errore durante l'esecuzione della query delle anomalie:", err);
-                showStatusMessage(`Errore SQL: ${err.message}`, "error", false);
+                console.error("Error while exdcute SQL Checker. Please report issue to team:", err);
+                showStatusMessage(`Error SQL: ${err.message}`, "error", false);
                 resultsSectionElement.classList.add('hidden');
             }
         }
@@ -311,5 +313,9 @@ SELECT ROW_NUMBER() OVER(ORDER BY error_code) AS rowid, * FROM (
         // La logica window.onclick per chiudere il modal è stata rimossa.
 
     </script>
+<p>
+<br><br>
+<center>powered by <a href="https://emmanuele.prudenzano.org/">WolfSolver</a></center>
+</p>
 </body>
 </html>
